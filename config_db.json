@@ -1,0 +1,8 @@
+{
+  "token": "TOKEN",
+  "excel_file": "work.xlsx",
+  "users": {
+    "user_name": "Реальное Имя"
+  },
+  "admin": ["ID пользователя в телеграмме"]
+}

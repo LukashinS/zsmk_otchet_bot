@@ -1,4 +1,3 @@
 .idea
-*.json
-*.db
-*.xlsx
+**/*.json
+**/*.xlsx

@@ -47,9 +47,10 @@ users = config_dict.get('users')
 fix_count = ('ввод', 'доп', "снятие", "обсл.", "чистый ввод",
              "инет", "инет+1тв", "новосел", "после новосел", "таунхаус",
              "домофон", "видеодомофон", "etth+1тв", "Etth",
-             "доставка сим", "настройка смарт", "85+")
+             "доставка сим", "настройка смарт", "85+", "spl1*4", "spl1*8")
 edit_count = ("камера", "камера подвес", "кабель", "адваки",
               "шосы", "UTP", "FTP")
+area = ("компас", "зсмк", "искитим", "тогучин", "мошково", "коченево", "колывань", "верх-ирмень", "бердск")
 
 bot = telebot.TeleBot(TOKEN_API)
 
@@ -102,13 +103,13 @@ def handel_finish(message):
     file_name = f"{str(_id)}.json"
     item = read_json_from_file(file_name)
 
-    rec_list = [item.get('Дата'), item.get('Пользователь'), item.get('Лицевой счет'), item.get('ввод'),
-                item.get('доп'), item.get('снятие'), item.get('обсл.'), item.get('камера'),
+    rec_list = [item.get('Дата'), item.get('Пользователь'), item.get('Лицевой счет'), item.get('Территория'),
+                item.get('ввод'), item.get('доп'), item.get('снятие'), item.get('обсл.'), item.get('камера'),
                 item.get('камера подвес'), item.get('чистый ввод'), item.get('инет'), item.get('инет+1тв'),
                 item.get('85+'), item.get('новосел'), item.get('после новосел'), item.get('таунхаус'),
                 item.get('настройка смарт'), item.get('домофон'), item.get('видеодомофон'), item.get('etth+1тв'),
                 item.get('Etth'), item.get('доставка сим'), item.get('кабель'), item.get('адваки'),
-                item.get('шосы'), item.get('UTP'), item.get('FTP')]
+                item.get('шосы'), item.get('UTP'), item.get('FTP'), item.get('spl1*4'), item.get('spl1*8')]
     try:
         wb, sheet = open_excel_xlsx(excel_file)
         sheet.append([elem if elem and elem != 0 else "" for elem in rec_list])
@@ -137,19 +138,16 @@ def handel_text(message):
             item.update(dict.fromkeys(edit_count, 0))
             item.update(dict.fromkeys(fix_count, 0))
             item.update({'Дата': datetime.now().strftime("%d.%m.%Y")})
-            item.update({'Переменная': None})
+            item.update({'Территория': None})
+            item.update({'Переменная': "Территория"})
             write_json(file_name, item)
             user_markup = telebot.types.ReplyKeyboardMarkup(True)
-            user_markup.row('ввод', 'доп', "снятие", "обсл.")
-            user_markup.row("камера", "камера подвес", "чистый ввод")
-            user_markup.row("инет", "инет+1тв", "85+", "настройка смарт")
-            user_markup.row("новосел", "после новосел", "таунхаус")
-            user_markup.row("домофон", "видеодомофон", "etth+1тв", "Etth")
-            user_markup.row("доставка сим", "кабель", "адваки")
-            user_markup.row("шосы", "UTP", "FTP")
-            user_markup.row("/show", "/reset", "/finish")
-            bot.send_message(_id, f"ЛС:{msg} - Что подключал?",
+            user_markup.row(*area[:3])
+            user_markup.row(*area[3:6])
+            user_markup.row(*area[6:-1])
+            bot.send_message(_id, f"Выбери территорию",
                              reply_markup=user_markup)
+
     if msg == "Лицевой счет":
         nick = message.from_user.username
         user_name = users.get(nick)
@@ -161,6 +159,23 @@ def handel_text(message):
         bot.send_message(_id, f"Добавил - {msg}")
 
     variable = item.get('Переменная')
+    if variable == "Территория" and (msg in area):
+        item["Территория"] = msg
+        item['Переменная'] = None
+        write_json(file_name, item)
+        bot.send_message(_id, f"Добавил '{variable}' - {msg}")
+        user_markup = telebot.types.ReplyKeyboardMarkup(True)
+        user_markup.row('ввод', 'доп', "снятие", "обсл.")
+        user_markup.row("камера", "камера подвес", "чистый ввод")
+        user_markup.row("инет", "инет+1тв", "85+", "настройка смарт")
+        user_markup.row("новосел", "после новосел", "таунхаус")
+        user_markup.row("домофон", "видеодомофон", "etth+1тв", "Etth")
+        user_markup.row("доставка сим", "кабель", "адваки")
+        user_markup.row("шосы", "UTP", "FTP", "spl1*4", "spl1*8")
+        user_markup.row("/show", "/reset", "/finish")
+        bot.send_message(_id, f"ЛС:{msg} - Что подключал?",
+                         reply_markup=user_markup)
+
     if variable in edit_count:
         try:
             item[variable] = int(msg)

@@ -144,7 +144,7 @@ def handel_text(message):
             user_markup = telebot.types.ReplyKeyboardMarkup(True)
             user_markup.row(*area[:3])
             user_markup.row(*area[3:6])
-            user_markup.row(*area[6:-1])
+            user_markup.row(*area[6:])
             bot.send_message(_id, f"Выбери территорию",
                              reply_markup=user_markup)
 

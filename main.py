@@ -40,22 +40,23 @@ users = config_dict.get('users')
 fix_count = ('ввод', 'доп', "снятие", "обсл.", "чистый ввод",
              "инет", "инет+1тв", "новосел", "после новосел", "таунхаус",
              "домофон", "видеодомофон", "etth+1тв", "Etth",
-             "доставка сим", "настройка смарт", "85+")
+             "доставка сим", "настройка смарт", "85+", "spl1*4", "spl1*8")
 edit_count = ("камера", "камера подвес", "кабель", "адваки",
               "шосы", "UTP", "FTP", "ютп", "фтп")
+area = ("компас", "зсмк", "искитим", "тогучин", "мошково", "коченево", "колывань", "верх-ирмень", "бердск")
 
 bot = telebot.TeleBot(TOKEN_API)
 db_file = os.path.join(path, 'result.db')
 db_conn = sqlite3.connect(db_file, check_same_thread=False)
 cursor = db_conn.cursor()
 # cursor.execute('drop table if exists Tasks')
-db_dict = {"id": "id", 'Дата': "date", 'Пользователь': "fio", 'Лицевой счет': "ls",
+db_dict = {"id": "id", 'Дата': "date", 'Пользователь': "fio", 'Лицевой счет': "ls", "Территория": "area",
            'ввод': "vvod", 'доп': "dop", "снятие": "snatie", "обсл.": "obsl", "камера": "camera",
            "камера подвес": "camera_podeves", "чистый ввод": "clear_vvod", "инет": "inet", "инет+1тв": "inet_plus_tv",
            "85+": "tv_plus", "новосел": "novosel", "после новосел": "after_novosel", "таунхаус": "townhouse",
            "настройка смарт": "smart", "домофон": "domofon", "видеодомофон": "videodomofon",
            "etth+1тв": "etth_plus_tv", "Etth": "etth", "доставка сим": "sim", "кабель": "cabel", "адваки": "advaki",
-           "шосы": "shos", "UTP": "utp", "FTP": "ftp", "Переменная": "variable"}
+           "шосы": "shos", "UTP": "utp", "FTP": "ftp", "spl1*4": "spl14", "spl1*8": "spl18", "Переменная": "variable"}
 db_list = db_dict.values()
 # cursor.execute(f'CREATE TABLE Tasks {tuple(bd_list)}')
 
@@ -138,19 +139,14 @@ def handel_text(message):
     variable = cursor.execute(f"SELECT variable FROM Tasks WHERE id='{_id}'").fetchone()
     if variable and variable[0] == 'Лицевой счет':
         cursor.execute(f'UPDATE Tasks SET {db_dict.get(variable[0])}="{msg}" WHERE "id"={_id}')
-        cursor.execute(f'UPDATE Tasks SET variable="" WHERE "id"={_id}')
+        cursor.execute(f'UPDATE Tasks SET variable="Территория" WHERE "id"={_id}')
         bot.send_message(_id, f"Добавил '{variable[0]}' - {msg}")
 
         user_markup = telebot.types.ReplyKeyboardMarkup(True)
-        user_markup.row('ввод', 'доп', "снятие", "обсл.")
-        user_markup.row("камера", "камера подвес", "чистый ввод")
-        user_markup.row("инет", "инет+1тв", "85+", "настройка смарт")
-        user_markup.row("новосел", "после новосел", "таунхаус")
-        user_markup.row("домофон", "видеодомофон", "etth+1тв", "Etth")
-        user_markup.row("доставка сим", "кабель", "адваки")
-        user_markup.row("шосы", "UTP", "FTP")
-        user_markup.row("/show", "/reset", "/finish")
-        bot.send_message(_id, f"ЛС:{msg} - Что подключал?",
+        user_markup.row(*area[:3])
+        user_markup.row(*area[3:6])
+        user_markup.row(*area[6:])
+        bot.send_message(_id, f"Выбери территорию",
                          reply_markup=user_markup)
 
     if msg == "Лицевой счет":
@@ -163,6 +159,22 @@ def handel_text(message):
         cursor.execute(f'INSERT INTO Tasks (id) VALUES (?)', (_id,))
 
         cursor.execute(f'UPDATE Tasks SET {db_dict.get("Пользователь")}="{user_name if user_name else nick}", variable="{msg}", date="{datetime.now().strftime("%d.%m.%Y")}" WHERE "id"={_id}')
+
+    if variable and variable[0] == "Территория" and (msg in area):
+        cursor.execute(f'UPDATE Tasks SET area="{msg}" WHERE "id"={_id}')
+        cursor.execute(f'UPDATE Tasks SET variable="" WHERE "id"={_id}')
+        bot.send_message(_id, f"Добавил '{variable}' - {msg}")
+        user_markup = telebot.types.ReplyKeyboardMarkup(True)
+        user_markup.row('ввод', 'доп', "снятие", "обсл.")
+        user_markup.row("камера", "камера подвес", "чистый ввод")
+        user_markup.row("инет", "инет+1тв", "85+", "настройка смарт")
+        user_markup.row("новосел", "после новосел", "таунхаус")
+        user_markup.row("домофон", "видеодомофон", "etth+1тв", "Etth")
+        user_markup.row("доставка сим", "кабель", "адваки")
+        user_markup.row("шосы", "UTP", "FTP", "spl1*4", "spl1*8")
+        user_markup.row("/show", "/reset", "/finish")
+        bot.send_message(_id, f"ЛС:{msg} - Что подключал?",
+                         reply_markup=user_markup)
 
     if msg in fix_count:
         cursor.execute(f'UPDATE Tasks SET {db_dict.get(msg)}="1" WHERE "id"={_id}')

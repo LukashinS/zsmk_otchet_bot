@@ -6,6 +6,9 @@ import os
 import sqlite3
 
 
+path = 'bot'
+
+
 def open_excel_xlsx(path, sheet_number=0):
     """Открывает документ excel (.xlsx) для чтения
 
@@ -19,20 +22,20 @@ def open_excel_xlsx(path, sheet_number=0):
     return wb, sheet
 
 
-def read_json_from_file(file_name):
+def read_json_from_file(file_name, path=path):
     """Считывание данных из файла
     """
 
-    with open(file_name, encoding='utf-8') as json_file:
+    file_path = os.path.join(path, file_name)
+    with open(file_path, encoding='utf-8') as json_file:
         data = json.load(json_file)
 
     return json.loads(json.dumps(data, ensure_ascii=False))
 
 
-config_file = os.path.join('config_db.json')
-config_dict = read_json_from_file(config_file)
+config_dict = read_json_from_file('config_db.json')
 TOKEN_API = config_dict.get('token')
-excel_file = config_dict.get('excel_file')
+excel_file = os.path.join(path, config_dict.get('excel_file'))
 users = config_dict.get('users')
 fix_count = ('ввод', 'доп', "снятие", "обсл.", "чистый ввод",
              "инет", "инет+1тв", "новосел", "после новосел", "таунхаус",
@@ -42,7 +45,7 @@ edit_count = ("камера", "камера подвес", "кабель", "ад
               "шосы", "UTP", "FTP", "ютп", "фтп")
 
 bot = telebot.TeleBot(TOKEN_API)
-db_file = os.path.join(os.path.curdir, 'result.db')
+db_file = os.path.join(path, 'result.db')
 db_conn = sqlite3.connect(db_file, check_same_thread=False)
 cursor = db_conn.cursor()
 # cursor.execute('drop table if exists Tasks')
@@ -72,7 +75,6 @@ def handel_start(message):
 @bot.message_handler(commands=['show'])
 def handel_show(message):
     _id = message.from_user.id
-    
     result = cursor.execute(f"SELECT * FROM Tasks WHERE id='{_id}'").fetchone()
     bot.send_message(_id, get_show_result(result))
 
@@ -108,11 +110,11 @@ def handel_doc(message):
 def handel_finish(message):
     _id = message.from_user.id
 
+    db_conn.commit()
     result = cursor.execute(f"SELECT * FROM Tasks WHERE id='{_id}'").fetchone()
     list_res = list(result)
     list_res.pop(0)
     list_res.pop(-1)
-    db_conn.commit()
 
     try:
         wb, sheet = open_excel_xlsx(excel_file)
@@ -134,7 +136,6 @@ def handel_text(message):
     _id = message.from_user.id
     msg = message.text
     variable = cursor.execute(f"SELECT variable FROM Tasks WHERE id='{_id}'").fetchone()
-    
     if variable and variable[0] == 'Лицевой счет':
         cursor.execute(f'UPDATE Tasks SET {db_dict.get(variable[0])}="{msg}" WHERE "id"={_id}')
         cursor.execute(f'UPDATE Tasks SET variable="" WHERE "id"={_id}')
@@ -168,7 +169,6 @@ def handel_text(message):
         bot.send_message(_id, f"Добавил - {msg}")
 
     if variable and variable[0] in edit_count:
-        
         var = variable[0]
         if var == 'ютп':
             value = 'UTP'
@@ -193,11 +193,9 @@ def handel_text(message):
         cursor.execute(f'UPDATE Tasks SET variable="{value}" WHERE "id"={_id}')
         bot.send_message(_id, f"Введи кол-во {msg}: ")
 
-    db_conn.commit()
-
 
 if __name__ == "__main__":
     try:
         bot.polling(none_stop=True)
-    except:
-        print('Какая то ошибка')
+    except Exception as inst:
+        print('Какая то ошибка: ', inst)
